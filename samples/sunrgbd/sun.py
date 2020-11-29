@@ -74,16 +74,18 @@ class SunConfig(Config):
     """
     # Give the configuration a recognizable name
     NAME = "sun"
+    # NUMBER OF GPUs to use. When using only a CPU, this needs to be set to 1.
+    GPU_COUNT = 1
 
-    # We use a GPU with 12GB memory, which can fit two images.
-    # Adjust down if you use a smaller GPU.
+    # Into 12GB GPU memory, can fit two images.
     IMAGES_PER_GPU = 1
 
     # Number of classes (including background)
     NUM_CLASSES = 1 + len(CLASSES)  # Background + num_classes
 
     # Number of training steps per epoch
-    STEPS_PER_EPOCH = 100
+    SUNRGBD_SIZE = 10000
+    STEPS_PER_EPOCH = SUNRGBD_SIZE / (IMAGES_PER_GPU * GPU_COUNT)
 
     # Skip detections with < 90% confidence
     DETECTION_MIN_CONFIDENCE = 0.9
