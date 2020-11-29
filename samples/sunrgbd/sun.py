@@ -158,7 +158,14 @@ class SunDataset(utils.Dataset):
                         dtype=np.uint8)
         for i, p in enumerate(info["polygons"]):
             # Get indexes of pixels inside the polygon and set them to 1
-            rr, cc = skimage.draw.polygon(p['all_points_y'], p['all_points_x'])
+
+            # TODO: Check whether that works for empty regions
+            if not p['all_points_y'] or not p['all_points_x']:
+                continue
+            
+            y_vals = np.clip(p['all_points_y'], a_min=0, a_max=info["height"])
+            x_vals = np.clip(p['all_points_x'], a_min=0, a_max=info["width"])
+            rr, cc = skimage.draw.polygon(y_vals, x_vals)
             mask[rr, cc, i] = 1
 
         class_ids_annotation = np.zeros([len(info["polygons"])])
