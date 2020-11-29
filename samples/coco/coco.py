@@ -56,12 +56,15 @@ from mrcnn.config import Config
 from mrcnn import model as modellib, utils
 
 # Path to trained weights file
-COCO_MODEL_PATH = os.path.join(ROOT_DIR, "mask_rcnn_coco.h5")
+MASK_RCNN_PATH = "/home/practicum_WS2021_2/instance_segmentation/Mask_RCNN/"
+VANILLA_MODEL_NAME = "mask_rcnn_coco.h5"
+COCO_MODEL_PATH = os.path.join(ROOT_DIR, "snapshots", VANILLA_MODEL_NAME)
+ABS_COCO_SNAPSHOT_PATH = os.path.join(MASK_RCNN_PATH, "snapshots", VANILLA_MODEL_NAME)
 
 # Directory to save logs and model checkpoints, if not provided
 # through the command line argument --logs
 DEFAULT_LOGS_DIR = os.path.join(ROOT_DIR, "logs")
-DEFAULT_DATASET_YEAR = "2014"
+DEFAULT_DATASET_YEAR = "2017"
 
 ############################################################
 #  Configurations
@@ -93,7 +96,7 @@ class CocoConfig(Config):
 
 class CocoDataset(utils.Dataset):
     def load_coco(self, dataset_dir, subset, year=DEFAULT_DATASET_YEAR, class_ids=None,
-                  class_map=None, return_coco=False, auto_download=False):
+                  class_map=None, return_coco=False, auto_download=False, cvhci_mode=True, train_mode=False):
         """Load a subset of the COCO dataset.
         dataset_dir: The root directory of the COCO dataset.
         subset: What to load (train, val, minival, valminusminival)
@@ -108,7 +111,13 @@ class CocoDataset(utils.Dataset):
         if auto_download is True:
             self.auto_download(dataset_dir, subset, year)
 
-        coco = COCO("{}/annotations/instances_{}{}.json".format(dataset_dir, subset, year))
+        if cvhci_mode is True and train_mode is True:
+            coco = COCO("/cvhci/data/segmentation/COCO/annotations/all_train2017.json")
+        elif cvhci_mode is True and train_mode is False:
+            coco = COCO("/cvhci/data/segmentation/COCO/annotations/all_val2017.json")
+        else: 
+            coco = COCO("{}/annotations/instances_{}{}.json".format(dataset_dir, subset, year))
+
         if subset == "minival" or subset == "valminusminival":
             subset = "val"
         image_dir = "{}/{}{}".format(dataset_dir, subset, year)
@@ -403,16 +412,23 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Train Mask R-CNN on MS COCO.')
     parser.add_argument("command",
+                        default='train',
                         metavar="<command>",
                         help="'train' or 'evaluate' on MS COCO")
-    parser.add_argument('--dataset', required=True,
+    parser.add_argument("--batch-size", required=False, 
+                        default=1, 
+                        metavar="<batch_size>", 
+                        help="Size of one batch for computing the gradient.")
+    parser.add_argument('--dataset', required=False,
+                        default="/cvhci/data/segmentation/COCO/train2017/",
                         metavar="/path/to/coco/",
                         help='Directory of the MS-COCO dataset')
     parser.add_argument('--year', required=False,
                         default=DEFAULT_DATASET_YEAR,
                         metavar="<year>",
                         help='Year of the MS-COCO dataset (2014 or 2017) (default=2014)')
-    parser.add_argument('--model', required=True,
+    parser.add_argument('--model', required=False,
+                        default=ABS_COCO_SNAPSHOT_PATH,
                         metavar="/path/to/weights.h5",
                         help="Path to weights .h5 file or 'coco'")
     parser.add_argument('--logs', required=False,
@@ -428,6 +444,12 @@ if __name__ == '__main__':
                         metavar="<True|False>",
                         help='Automatically download and unzip MS-COCO files (default=False)',
                         type=bool)
+    parser.add_argument('--cvhci_mode', required=False,
+                        default=True,
+                        metavar="<True|False>",
+                        help='Whether training is done in cvhci server.',
+                        type=bool) 
+
     args = parser.parse_args()
     print("Command: ", args.command)
     print("Model: ", args.model)
@@ -439,6 +461,7 @@ if __name__ == '__main__':
     # Configurations
     if args.command == "train":
         config = CocoConfig()
+        config.Images_PER_GPU = args.batch_size
     else:
         class InferenceConfig(CocoConfig):
             # Set batch size to 1 since we'll be running inference on
@@ -480,13 +503,13 @@ if __name__ == '__main__':
         dataset_train = CocoDataset()
         dataset_train.load_coco(args.dataset, "train", year=args.year, auto_download=args.download)
         if args.year in '2014':
-            dataset_train.load_coco(args.dataset, "valminusminival", year=args.year, auto_download=args.download)
+            dataset_train.load_coco(args.dataset, "valminusminival", year=args.year, auto_download=args.download, cvhci_mode=args.cvhci_mode, train_mode=True)
         dataset_train.prepare()
 
         # Validation dataset
         dataset_val = CocoDataset()
         val_type = "val" if args.year in '2017' else "minival"
-        dataset_val.load_coco(args.dataset, val_type, year=args.year, auto_download=args.download)
+        dataset_val.load_coco(args.dataset, val_type, year=args.year, auto_download=args.download, cvhci_mode=args.cvhci_mode, train_mode=False)
         dataset_val.prepare()
 
         # Image Augmentation
