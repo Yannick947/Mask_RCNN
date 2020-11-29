@@ -352,14 +352,13 @@ if __name__ == '__main__':
 
     # Load weights
     print("Loading weights ", weights_path)
-    if args.weights.lower() == "coco":
-        # Exclude the last layers because they require a matching
-        # number of classes
+    try:
+        model.load_weights(weights_path, by_name=True)
+    except ValueError: 
+        print('Dimensions of input and output layers did not match, exclude these layers..')
         model.load_weights(weights_path, by_name=True, exclude=[
             "mrcnn_class_logits", "mrcnn_bbox_fc",
             "mrcnn_bbox", "mrcnn_mask"])
-    else:
-        model.load_weights(weights_path, by_name=True)
 
     # Train or evaluate
     if args.command == "train":
