@@ -63,7 +63,6 @@ ABS_COCO_SNAPSHOT_PATH = os.path.join(MASK_RCNN_PATH, "snapshots", VANILLA_MODEL
 # Directory to save logs and model checkpoints, if not provided
 # through the command line argument --logs
 DEFAULT_LOGS_DIR = os.path.join(ROOT_DIR, "logs")
-DEFAULT_DATASET_YEAR = "2017"
 ############################################################
 #  Configurations
 ############################################################
@@ -210,7 +209,7 @@ def detect_and_color_splash(model, image_path=None, video_path=None):
         # Run model detection and generate the color splash effect
         print("Running on {}".format(args.image))
         # Read image
-        image = skimage.io.imread(args.image)
+        image = skimage.io.imread(args.image, plugin='pil')
         # Detect objects
         r = model.detect([image], verbose=1)[0]
         # Color splash
