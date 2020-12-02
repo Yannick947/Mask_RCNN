@@ -170,9 +170,10 @@ class SunDataset(utils.Dataset):
         for i, p in enumerate(info["polygons"]):
             # Get indexes of pixels inside the polygon and set them to 1
 
-            if not p['all_points_y'] or not p['all_points_x'] or\
+            if (type(p['all_points_y']) is list and type(p['all_points_x']) is list) and\
+                (not p['all_points_y'] or not p['all_points_x'] or\
                 len(p['all_points_y']) < 3 or len(p['all_points_x']) < 3 or\
-                len(p['all_points_y'] != len(p['all_points_x'])):
+                (len(p['all_points_y']) != len(p['all_points_x']))):
                 print('Ignore points y: ', p['all_points_y'], ' and x ', p['all_points_x'])
                 continue
             
