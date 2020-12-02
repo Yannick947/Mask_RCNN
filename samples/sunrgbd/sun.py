@@ -63,6 +63,7 @@ ABS_COCO_SNAPSHOT_PATH = os.path.join(MASK_RCNN_PATH, "snapshots", VANILLA_MODEL
 # Directory to save logs and model checkpoints, if not provided
 # through the command line argument --logs
 DEFAULT_LOGS_DIR = os.path.join(ROOT_DIR, "logs")
+IGNORE_IMAGES_PATH = './skip_image_paths.txt'
 ############################################################
 #  Configurations
 ############################################################
@@ -101,7 +102,14 @@ class SunDataset(utils.Dataset):
         for class_id_i, class_name in enumerate(CLASSES): 
             self.class_to_id_map[class_name] = class_id_i + 1
 
+        self.ignore_paths = self.__get_ignore_pahts()
         super().__init__()
+
+    def __get_ignore_pahts(self):
+        with open(IGNORE_IMAGES_PATH, 'r') as f:
+            content = f.readlines()
+        paths = [x.strip() for x in content] 
+        return paths
 
     def load_sun(self, dataset_dir, subset):
         """Load a subset of the Balloon dataset.
@@ -130,7 +138,8 @@ class SunDataset(utils.Dataset):
             assert split_info[a_id] in ["train", "val", 'test']
 
             # If the image is not part of the currently initialized split -> continue and handle this image later on
-            if split_info[a_id] != subset:
+            # Skip if image caused problems during earlier training sessions
+            if split_info[a_id] != subset or a_val['path_to_image'] in self.ignore_paths:
                 continue
 
             image_path = os.path.join(dataset_dir, a_val['path_to_image'])
@@ -162,7 +171,10 @@ class SunDataset(utils.Dataset):
             # Get indexes of pixels inside the polygon and set them to 1
 
             # TODO: Check whether that works for empty regions
-            if not p['all_points_y'] or not p['all_points_x']:
+            if not p['all_points_y'] or not p['all_points_x'] or\
+                len(p['all_points_y'] < 3) or len(p['all_points_x'] < 3) or\
+                len(p['all_points_y'] != len(p['all_points_x'])):
+                print('Ignore points y: ', p['all_points_y'], ' and x ', p['all_points_x'])
                 continue
             
             y_vals = np.clip(p['all_points_y'], a_min=0, a_max=info["height"])
