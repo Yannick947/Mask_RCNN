@@ -34,6 +34,19 @@ import datetime
 import numpy as np
 import skimage.draw
 
+# Activate free gpu
+import nvgpu
+
+availabel_gpus = nvgpu.available_gpus()
+
+if type(availabel_gpus) is list and len(availabel_gpus) > 0:
+    os.environ["CUDA_VISIBLE_DEVICES"] = availabel_gpus[0]
+    print('Using GPU ', availabel_gpus[0])
+
+else: 
+    print('No free gpu found, try later..')
+    exit()
+
 # Root directory of the project
 ROOT_DIR = os.path.abspath('./')
 
