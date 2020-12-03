@@ -33,7 +33,7 @@ import json
 import datetime
 import numpy as np
 import skimage.draw
-
+import imgaug
 # Activate free gpu
 
 try: 
@@ -368,7 +368,7 @@ if __name__ == '__main__':
 
     # Select weights file to load
     if args.weights.lower() == "coco":
-        weights_path = COCO_WEIGHTS_PATH
+        weights_path = ABS_COCO_SNAPSHOT_PATH
         # Download weights file
         if not os.path.exists(weights_path):
             utils.download_trained_weights(weights_path)
@@ -397,12 +397,33 @@ if __name__ == '__main__':
         # Since we're using a very small dataset, and starting from
         # COCO trained weights, we don't need to train too long. Also,
         # no need to train all layers, just the heads should do it.
-        print("Training network heads")
+        print("\n\n --- Training network heads --- \n\n")
+        augmentation = imgaug.augmenters.Fliplr(0.5)
+
+        # Training - Stage 1
         model.train(datasets["train"], datasets["val"],
                     learning_rate=config.LEARNING_RATE,
-                    epochs=5,
+                    epochs=4,
                     layers='heads')
 
+        # Training - Stage 2
+        # Finetune layers from ResNet stage 4 and up
+        print("\n\n --- Fine tune Resnet stage 4 and up --- \n\n")
+        model.train(datasets["train"], datasets["val"],
+                    learning_rate=config.LEARNING_RATE,
+                    epochs=3,
+                    layers='4+',
+                    augmentation=augmentation)
+
+        # Training - Stage 3
+        # Fine tune all layers
+        print("\n\n --- Fine tune all layers --- \n\n")
+        model.train(datasets["train"], datasets["val"],
+                    learning_rate=config.LEARNING_RATE / 10,
+                    epochs=3,
+                    layers='all',
+                    augmentation=augmentation)
+        
     elif args.command == "splash":
         detect_and_color_splash(model, image_path=args.image,
                                 video_path=args.video)
