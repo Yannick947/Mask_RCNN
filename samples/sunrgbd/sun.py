@@ -35,9 +35,9 @@ import numpy as np
 import skimage.draw
 
 # Activate free gpu
-import nvgpu
 
 try: 
+    import nvgpu
     available_gpus = nvgpu.available_gpus()
 
     if type(available_gpus) is list and len(available_gpus) > 0:
