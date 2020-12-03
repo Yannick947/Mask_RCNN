@@ -400,7 +400,7 @@ if __name__ == '__main__':
         print("Training network heads")
         model.train(datasets["train"], datasets["val"],
                     learning_rate=config.LEARNING_RATE,
-                    epochs=30,
+                    epochs=5,
                     layers='heads')
 
     elif args.command == "splash":

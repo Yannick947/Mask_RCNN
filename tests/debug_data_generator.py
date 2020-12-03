@@ -24,7 +24,7 @@ ROOT_DIR = os.path.abspath('./')
 # Import Mask RCNN
 sys.path.append(ROOT_DIR)  
 from mrcnn.config import Config
-from mrcnn.model import data_generator 
+from mrcnn.model import DataGenerator 
 from samples.sunrgbd.sun import SunConfig, SunDataset
 
 CLASSES = ['bed', 'tool', 'desk', 'chair', 'table', 'wardrobe', 'sofa', 'bookcase']
@@ -39,12 +39,14 @@ def main():
     dataset = SunDataset(SunConfig())
     dataset.load_sun(LOCAL_PATH_DATASET, DEBUG_DATASET)
     dataset.prepare()
-    gen = data_generator(dataset, SunConfig() , shuffle=True,
-                                              augmentation=False,
-                                              batch_size=2)
+    gen = DataGenerator(dataset=dataset,
+                        config=SunConfig(),
+                        shuffle=True,
+                        augmentation=False,
+                        batch_size=2)
 
-    while True:
-        next(gen)
+    for i in range(len(gen)):
+        gen[i]
 
 if __name__ == '__main__':
     main()
