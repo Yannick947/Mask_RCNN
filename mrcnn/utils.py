@@ -259,6 +259,12 @@ class Dataset(object):
         self.class_info = [{"source": "", "id": 0, "name": "BG"}]
         self.source_class_ids = {}
 
+    def __len__(self):
+        if hasattr(self, 'config') and hasattr(self.config, 'IMAGES_PER_GPU'):
+            return int(len(self._image_ids) / self.config.IMAGES_PER_GPU)
+        else: 
+            return int(len(self._image_ids))
+
     def add_class(self, source, class_id, class_name):
         assert "." not in source, "Source name cannot contain a dot"
         # Does the class exist already?

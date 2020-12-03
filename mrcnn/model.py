@@ -22,9 +22,9 @@ import keras.backend as K
 import keras.layers as KL
 import keras.engine as KE
 import keras.models as KM
+from keras.callbacks import CSVLogger
 
 from mrcnn import utils
-
 # Requires TensorFlow 1.3+ and Keras 2.0.8+.
 from distutils.version import LooseVersion
 assert LooseVersion(tf.__version__) >= LooseVersion("1.3")
@@ -1804,14 +1804,11 @@ def data_generator(dataset, config, shuffle=True, augment=False, augmentation=No
                 b = 0
         except (GeneratorExit, KeyboardInterrupt):
             raise
-        except:
+        except Exception as e:
             # Log it and skip the image
-            # logging.exception("Error processing image {}".format(
-            #     dataset.image_info[image_id]))
-            # error_count += 1
-            # if error_count > 5:
-            #     raise
-            pass
+            logging.exception("Error processing image {}".format(
+                dataset.image_info[image_id]['path']))
+            
 
 ############################################################
 #  MaskRCNN Class
@@ -2340,7 +2337,9 @@ class MaskRCNN():
             keras.callbacks.TensorBoard(log_dir=self.log_dir,
                                         histogram_freq=0, write_graph=False, write_images=False),
             keras.callbacks.ModelCheckpoint(self.checkpoint_path,
-                                            verbose=0, save_weights_only=True),
+                                            verbose=0, save_weights_only=True, save_best_only=True, 
+                                            mode='min'),
+            CSVLogger(os.path.join(self.log_dir, 'logs.csv'), separator=",", append=True)
         ]
 
         # Add custom callbacks to the list
@@ -2359,18 +2358,18 @@ class MaskRCNN():
         if os.name is 'nt':
             workers = 0
         else:
-            workers = min(multiprocessing.cpu_count(), 0)
+            workers = min(multiprocessing.cpu_count(), 4)
             print(f'Using {workers} workers.')
 
         self.keras_model.fit_generator(
             train_generator,
             initial_epoch=self.epoch,
             epochs=epochs,
-            steps_per_epoch=self.config.STEPS_PER_EPOCH,
+            steps_per_epoch=len(train_dataset),
             callbacks=callbacks,
             validation_data=val_generator,
-            validation_steps=self.config.VALIDATION_STEPS,
-            max_queue_size=10,
+            validation_steps=len(val_dataset),
+            max_queue_size=100,
             workers=workers,
             use_multiprocessing=False,
         )

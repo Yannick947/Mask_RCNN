@@ -37,15 +37,18 @@ import skimage.draw
 # Activate free gpu
 import nvgpu
 
-available_gpus = nvgpu.available_gpus()
+try: 
+    available_gpus = nvgpu.available_gpus()
 
-if type(available_gpus) is list and len(available_gpus) > 0:
-    os.environ["CUDA_VISIBLE_DEVICES"] = available_gpus[0]
-    print('Using GPU ', available_gpus[0])
+    if type(available_gpus) is list and len(available_gpus) > 0:
+        os.environ["CUDA_VISIBLE_DEVICES"] = available_gpus[0]
+        print('Using GPU ', available_gpus[0])
 
-else: 
-    print('No free gpu found, try later..')
-    exit()
+    else: 
+        print('No free gpu found, try later..')
+        exit()
+except: 
+    pass
 
 # Root directory of the project
 ROOT_DIR = os.path.abspath('./')
@@ -54,9 +57,6 @@ ROOT_DIR = os.path.abspath('./')
 sys.path.append(ROOT_DIR)  # To find local version of the library
 from mrcnn.config import Config
 from mrcnn import model as modellib, utils
-
-# Path to trained weights file
-COCO_WEIGHTS_PATH = os.path.join(ROOT_DIR, 'snapshots', "mask_rcnn_coco.h5")
 
 # Directory to save logs and model checkpoints, if not provided
 # through the command line argument --logs
@@ -92,14 +92,10 @@ class SunConfig(Config):
     GPU_COUNT = 1
 
     # Into 12GB GPU memory, can fit two images.
-    IMAGES_PER_GPU = 1
+    IMAGES_PER_GPU = 2
 
     # Number of classes (including background)
     NUM_CLASSES = 1 + len(CLASSES)  # Background + num_classes
-
-    # Number of training steps per epoch
-    SUNRGBD_SIZE = 10000
-    STEPS_PER_EPOCH = SUNRGBD_SIZE / (IMAGES_PER_GPU * GPU_COUNT)
 
     # Skip detections with < 90% confidence
     DETECTION_MIN_CONFIDENCE = 0.9
@@ -110,7 +106,8 @@ class SunConfig(Config):
 ############################################################
 
 class SunDataset(utils.Dataset):
-    def __init__(self):
+    def __init__(self, config=None):
+        self.config = config
         self.class_to_id_map = dict()
         for class_id_i, class_name in enumerate(CLASSES): 
             self.class_to_id_map[class_name] = class_id_i + 1
@@ -181,13 +178,13 @@ class SunDataset(utils.Dataset):
         mask = np.zeros([info["height"], info["width"], len(info["polygons"])],
                         dtype=np.uint8)
         for i, p in enumerate(info["polygons"]):
-            # Get indexes of pixels inside the polygon and set them to 1
-
+            
+            # Skip polygons which are invalid
             if (type(p['all_points_y']) is list and type(p['all_points_x']) is list) and\
                 (not p['all_points_y'] or not p['all_points_x'] or\
                 len(p['all_points_y']) < 3 or len(p['all_points_x']) < 3 or\
                 (len(p['all_points_y']) != len(p['all_points_x']))):
-                print('Ignore points y: ', p['all_points_y'], ' and x ', p['all_points_x'])
+                # print('Ignore points y: ', p['all_points_y'], ' and x ', p['all_points_x'])
                 continue
             
             y_vals = np.clip(p['all_points_y'], a_min=0, a_max=info["height"])
@@ -318,14 +315,15 @@ if __name__ == '__main__':
     parser.add_argument('--video', required=False,
                         metavar="path or URL to video",
                         help='Video to apply the color splash effect on')
-    parser.add_argument('--cvhci_mode', required=False,
-                        default=True,
+    parser.add_argument('--cvhci-mode', required=False,
+                        default=False,
                         metavar="<True|False>",
                         help='Whether training is done in cvhci server.',
                         type=bool) 
     args = parser.parse_args()
 
     if args.cvhci_mode is True:
+        print('cvhci mode is ', args.cvhci_mode)
         args.dataset = CVHCI_DATASET_PATH
     elif not args.dataset: 
         args.dataset = LOCAL_PATH_DATASET
@@ -356,7 +354,7 @@ if __name__ == '__main__':
     # Initialize dataset
     datasets = dict()
     for dataset_name in ["train", "val", "test"]:
-        datasets[dataset_name] = SunDataset()
+        datasets[dataset_name] = SunDataset(config=config)
         datasets[dataset_name].load_sun(args.dataset, "train")
         datasets[dataset_name].prepare()
 
