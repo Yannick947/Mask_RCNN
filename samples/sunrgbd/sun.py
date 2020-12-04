@@ -37,6 +37,7 @@ import imgaug
 # Activate free gpu
 
 try: 
+    print('Try to set gpu ressources ...')
     import nvgpu
     available_gpus = nvgpu.available_gpus()
 
@@ -305,6 +306,10 @@ if __name__ == '__main__':
                         default=ABS_COCO_SNAPSHOT_PATH,
                         metavar="/path/to/weights.h5",
                         help="Path to weights .h5 file or 'coco'")
+    parser.add_argument('--snapshot-mode', required=False,
+                        default='None',
+                        metavar="'last', 'coco' or 'imagenet'",
+                        help="Path to weights .h5 file or 'coco'")
     parser.add_argument('--logs', required=False,
                         default=DEFAULT_LOGS_DIR,
                         metavar="/path/to/logs/",
@@ -321,7 +326,7 @@ if __name__ == '__main__':
                         help='Whether training is done in cvhci server.',
                         type=bool) 
     args = parser.parse_args()
-
+    print('Arguments:\n ', args)
     if args.cvhci_mode is True:
         print('cvhci mode is ', args.cvhci_mode)
         args.dataset = CVHCI_DATASET_PATH
@@ -331,24 +336,13 @@ if __name__ == '__main__':
     # Validate arguments
     if args.command == "train":
         assert args.dataset, "Argument --dataset is required for training"
-    elif args.command == "splash":
-        assert args.image or args.video,\
-               "Provide --image or --video to apply color splash"
 
     print("Weights: ", args.weights)
     print("Dataset: ", args.dataset)
     print("Logs: ", args.logs)
 
     # Configurations
-    if args.command == "train":
-        config = SunConfig()
-    else:
-        class InferenceConfig(SunConfig):
-            # Set batch size to 1 since we'll be running inference on
-            # one image at a time. Batch size = GPU_COUNT * IMAGES_PER_GPU
-            GPU_COUNT = 1
-            IMAGES_PER_GPU = 1
-        config = InferenceConfig()
+    config = SunConfig()
     config.display()
 
     # Initialize dataset
@@ -358,24 +352,20 @@ if __name__ == '__main__':
         datasets[dataset_name].load_sun(args.dataset, "train")
         datasets[dataset_name].prepare()
 
-    # Create model
-    if args.command == "train":
-        model = modellib.MaskRCNN(mode="training", config=config,
-                                  model_dir=args.logs)
-    else:
-        model = modellib.MaskRCNN(mode="inference", config=config,
+    model = modellib.MaskRCNN(mode="training", config=config,
                                   model_dir=args.logs)
 
     # Select weights file to load
-    if args.weights.lower() == "coco":
+    if args.snapshot_mode.lower() == "coco":
         weights_path = ABS_COCO_SNAPSHOT_PATH
         # Download weights file
         if not os.path.exists(weights_path):
             utils.download_trained_weights(weights_path)
-    elif args.weights.lower() == "last":
+    elif args.snapshot_mode.lower() == "last":
         # Find last trained weights
         weights_path = model.find_last()
-    elif args.weights.lower() == "imagenet":
+        print('\nLast trained weights found in ', weights_path)
+    elif args.snapshot_mode.lower() == "imagenet":
         # Start from ImageNet trained weights
         weights_path = model.get_imagenet_weights()
     else:
@@ -391,14 +381,14 @@ if __name__ == '__main__':
             "mrcnn_class_logits", "mrcnn_bbox_fc",
             "mrcnn_bbox", "mrcnn_mask"])
 
+    augmentation = imgaug.augmenters.Fliplr(0.5)
     # Train or evaluate
-    if args.command == "train":
+    if args.command == "train" and args.weights == ABS_COCO_SNAPSHOT_PATH:
         # *** This training schedule is an example. Update to your needs ***
         # Since we're using a very small dataset, and starting from
         # COCO trained weights, we don't need to train too long. Also,
         # no need to train all layers, just the heads should do it.
         print("\n\n --- Training network heads --- \n\n")
-        augmentation = imgaug.augmenters.Fliplr(0.5)
 
         # Training - Stage 1
         model.train(datasets["train"], datasets["val"],
@@ -414,19 +404,15 @@ if __name__ == '__main__':
                     epochs=3,
                     layers='4+',
                     augmentation=augmentation)
-
+    
+    if args.command == 'train':
         # Training - Stage 3
         # Fine tune all layers
+        epochs = model.epoch + 4
+
         print("\n\n --- Fine tune all layers --- \n\n")
         model.train(datasets["train"], datasets["val"],
                     learning_rate=config.LEARNING_RATE / 10,
-                    epochs=3,
+                    epochs=epochs,
                     layers='all',
                     augmentation=augmentation)
-        
-    elif args.command == "splash":
-        detect_and_color_splash(model, image_path=args.image,
-                                video_path=args.video)
-    else:
-        print("'{}' is not recognized. "
-              "Use 'train' or 'splash'".format(args.command))
