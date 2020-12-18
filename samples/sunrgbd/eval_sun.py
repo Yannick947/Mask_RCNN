@@ -1,3 +1,5 @@
+import math
+
 from keras import backend as K
 from keras.callbacks import TensorBoard
 import numpy as np
@@ -12,9 +14,12 @@ class LRTensorBoard(TensorBoard):
 
     def on_epoch_end(self, epoch, logs=None):
         logs = logs or {}
-        logs.update({'lr': K.eval(self.model.optimizer.lr)})
-        logs.update({'Augmentation strength': SunConfig.AUGMENTATION_STRENGTH})
-        logs.update({'Augmentation num': SunConfig.AUGMENTATION_NUM})
+
+        #Cast logs to np.float to fix error
+        logs.update({'lr': np.float_(K.eval(self.model.optimizer.lr))})
+        logs.update({'Augmentation strength': np.float_(SunConfig.AUGMENTATION_STRENGTH)})
+        logs.update({'Augmentation num': np.float_(SunConfig.AUGMENTATION_NUM)})
+
         super().on_epoch_end(epoch, logs)
 
 
@@ -41,8 +46,8 @@ def evaluate_sun(args, dataset):
     model.load_weights(model_path, by_name=True)
     image_ids = dataset.image_ids
     APs = []
-    IoUs = []
-
+    sum_aps = 0.0
+    num_aps = 0
     for image_id in image_ids:
         # Load image and ground truth data
         image, image_meta, gt_class_id, gt_bbox, gt_mask =\
@@ -56,9 +61,15 @@ def evaluate_sun(args, dataset):
         AP, _, _, _ =\
             utils.compute_ap(gt_bbox, gt_class_id, gt_mask,
                             r["rois"], r["class_ids"], r["scores"], r['masks'])
-        if type(AP) is float or type(AP) is np.float64:
-            APs.append(AP)
-        elif type(AP) is list and len(AP) > 0: 
-            APs.append(sum(AP) / len(AP))
 
-    print("mAP: ", np.mean(APs))
+        if type(AP) is float or type(AP) is np.float64 and not math.isnan(AP):
+            APs.append(float(AP))
+
+    for single_ap in APs:
+        sum_aps += float(single_ap)
+        num_aps += 1
+
+    print("Num aps analyzed: ", len(APs))
+    print("mAP: ", sum(APs) / len(APs))
+    print(sum_aps / num_aps)
+

@@ -374,7 +374,7 @@ if __name__ == '__main__':
                     epochs=epochs,
                     layers='all',
                     augmentation=augmentation)
-
+                    
     if args.command == 'evaluate':
         evaluate_sun(args, datasets['test'])
 
