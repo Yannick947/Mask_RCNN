@@ -36,34 +36,19 @@ import skimage.draw
 import imgaug
 # Activate free gpu
 
-try: 
-    print('Try to set gpu ressources ...')
-    import nvgpu
-    available_gpus = nvgpu.available_gpus()
-
-    if type(available_gpus) is list and len(available_gpus) > 0:
-        os.environ["CUDA_VISIBLE_DEVICES"] = available_gpus[0]
-        print('Using GPU ', available_gpus[0])
-
-    else: 
-        print('No free gpu found, try later..')
-        exit()
-except: 
-    pass
-
 # Root directory of the project
 ROOT_DIR = os.path.abspath('./')
 
 # Import Mask RCNN
 sys.path.append(ROOT_DIR)  # To find local version of the library
-from mrcnn.config import Config
 from mrcnn import model as modellib, utils
+from samples.sunrgbd.sun_config import SunConfig, InferenceConfig, CLASSES
+from samples.sunrgbd.eval_sun import evaluate_sun
 
 # Directory to save logs and model checkpoints, if not provided
 # through the command line argument --logs
 DEFAULT_LOGS_DIR = os.path.join(ROOT_DIR, "logs")
 
-CLASSES = ['bed', 'tool', 'desk', 'chair', 'table', 'wardrobe', 'sofa', 'bookcase']
 ANNOTATION_FILENAME = 'via_regions_sunrgbd.json'
 CVHCI_DATASET_PATH = "/cvhci/data/depth/SUNRGBD/"
 LOCAL_PATH_DATASET = "C:/Users/Yannick/Downloads/SUNRGBD"
@@ -78,29 +63,6 @@ ABS_COCO_SNAPSHOT_PATH = os.path.join(MASK_RCNN_PATH, "snapshots", VANILLA_MODEL
 # through the command line argument --logs
 DEFAULT_LOGS_DIR = os.path.join(ROOT_DIR, "logs")
 IGNORE_IMAGES_PATH = './skip_image_paths.txt'
-############################################################
-#  Configurations
-############################################################
-
-
-class SunConfig(Config):
-    """Configuration for training on the sun dataset.
-    Derives from the base Config class and overrides some values.
-    """
-    # Give the configuration a recognizable name
-    NAME = "sun"
-    # NUMBER OF GPUs to use. When using only a CPU, this needs to be set to 1.
-    GPU_COUNT = 1
-
-    # Into 12GB GPU memory, can fit two images.
-    IMAGES_PER_GPU = 2
-
-    # Number of classes (including background)
-    NUM_CLASSES = 1 + len(CLASSES)  # Background + num_classes
-
-    # Skip detections with < 90% confidence
-    DETECTION_MIN_CONFIDENCE = 0.9
-
 
 ############################################################
 #  Dataset
@@ -324,7 +286,12 @@ if __name__ == '__main__':
                         default=False,
                         metavar="<True|False>",
                         help='Whether training is done in cvhci server.',
-                        type=bool) 
+                        type=bool)
+    parser.add_argument('--epochs', required=False,
+                        default=4,
+                        metavar="Num epochs",
+                        help='Number of epochs for fine tuning all layers',
+                        type=int)
     args = parser.parse_args()
     print('Arguments:\n ', args)
     if args.cvhci_mode is True:
@@ -333,56 +300,46 @@ if __name__ == '__main__':
     elif not args.dataset: 
         args.dataset = LOCAL_PATH_DATASET
 
-    # Validate arguments
-    if args.command == "train":
-        assert args.dataset, "Argument --dataset is required for training"
-
-    print("Weights: ", args.weights)
-    print("Dataset: ", args.dataset)
-    print("Logs: ", args.logs)
+    assert args.dataset, "Argument --dataset is required for training"
 
     # Configurations
     config = SunConfig()
     config.display()
-
+    print("Weights: ", args.weights)
+    print("Dataset: ", args.dataset)
+    print("Logs: ", args.logs)
     # Initialize dataset
     datasets = dict()
     for dataset_name in ["train", "val", "test"]:
         datasets[dataset_name] = SunDataset(config=config)
-        datasets[dataset_name].load_sun(args.dataset, "train")
+        datasets[dataset_name].load_sun(args.dataset, dataset_name)
         datasets[dataset_name].prepare()
 
-    model = modellib.MaskRCNN(mode="training", config=config,
-                                  model_dir=args.logs)
+    if args.command == "train":
 
-    # Select weights file to load
-    if args.snapshot_mode.lower() == "coco":
-        weights_path = ABS_COCO_SNAPSHOT_PATH
-        # Download weights file
-        if not os.path.exists(weights_path):
-            utils.download_trained_weights(weights_path)
-    elif args.snapshot_mode.lower() == "last":
-        # Find last trained weights
-        weights_path = model.find_last()
-        print('\nLast trained weights found in ', weights_path)
-    elif args.snapshot_mode.lower() == "imagenet":
-        # Start from ImageNet trained weights
-        weights_path = model.get_imagenet_weights()
-    else:
+        print('Length train: ', datasets['train'].num_images,
+            '\nLength test', datasets['test'].num_images, 
+            '\nLength val: ', datasets['val'].num_images)
+
+        model = modellib.MaskRCNN(mode="training", config=config,
+                                    model_dir=args.logs)
+
         weights_path = args.weights
 
-    # Load weights
-    print("Loading weights ", weights_path)
-    try:
-        model.load_weights(weights_path, by_name=True)
-    except ValueError: 
-        print('Dimensions of input and output layers did not match, exclude these layers..')
-        model.load_weights(weights_path, by_name=True, exclude=[
-            "mrcnn_class_logits", "mrcnn_bbox_fc",
-            "mrcnn_bbox", "mrcnn_mask"])
+        # Load weights
+        print("Loading weights ", weights_path)
+        try:
+            model.load_weights(weights_path, by_name=True)
+        except ValueError: 
+            print('Dimensions of input and output layers did not match, exclude these layers..')
+            model.load_weights(weights_path, by_name=True, exclude=[
+                "mrcnn_class_logits", "mrcnn_bbox_fc",
+                "mrcnn_bbox", "mrcnn_mask"])
 
-    augmentation = imgaug.augmenters.Fliplr(0.5)
-    # Train or evaluate
+        #RandAugment applies random augmentation techniques chosen from a wide range of augmentation
+        augmentation = imgaug.augmenters.Sometimes(0.4, [
+            imgaug.augmenters.RandAugment(n=config.AUGMENTATION_NUM, m=config.AUGMENTATION_STRENGTH)
+        ])    # Train or evaluate
     if args.command == "train" and args.weights == ABS_COCO_SNAPSHOT_PATH:
         # *** This training schedule is an example. Update to your needs ***
         # Since we're using a very small dataset, and starting from
@@ -405,14 +362,19 @@ if __name__ == '__main__':
                     layers='4+',
                     augmentation=augmentation)
     
-    if args.command == 'train':
+    if args.command == 'train' and args.epochs > 0:
+        print('Starting with fine tuning the whole network.')
         # Training - Stage 3
         # Fine tune all layers
-        epochs = model.epoch + 4
+        epochs = model.epoch + args.epochs
 
         print("\n\n --- Fine tune all layers --- \n\n")
         model.train(datasets["train"], datasets["val"],
-                    learning_rate=config.LEARNING_RATE / 10,
+                    learning_rate=config.LEARNING_RATE / 5,
                     epochs=epochs,
                     layers='all',
                     augmentation=augmentation)
+
+    if args.command == 'evaluate':
+        evaluate_sun(args, datasets['test'])
+
