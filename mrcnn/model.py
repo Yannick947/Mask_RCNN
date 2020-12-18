@@ -30,6 +30,7 @@ from distutils.version import LooseVersion
 assert LooseVersion(tf.__version__) >= LooseVersion("1.3")
 assert LooseVersion(keras.__version__) >= LooseVersion('2.0.8')
 
+from samples.sunrgbd.eval_sun import LRTensorBoard
 
 ############################################################
 #  Utility Functions
@@ -2354,10 +2355,10 @@ class MaskRCNN():
         if not os.path.exists(self.log_dir):
             os.makedirs(self.log_dir)
 
-        # Callbacks
+        # Callbacks, replaced Tensorbaord with custom logger
         callbacks = [
-            keras.callbacks.TensorBoard(log_dir=self.log_dir,
-                                        histogram_freq=0, write_graph=False, write_images=False),
+            LRTensorBoard(log_dir=self.log_dir,
+                          histogram_freq=0, write_graph=False, write_images=False),
             keras.callbacks.ModelCheckpoint(self.checkpoint_path,
                                             verbose=0, save_weights_only=True, save_best_only=True, 
                                             mode='min'),
