@@ -57,7 +57,6 @@ LOCAL_PATH_DATASET = "C:/Users/Yannick/Downloads/SUNRGBD"
 MASK_RCNN_PATH = "/home/practicum_WS2021_2/instance_segmentation/Mask_RCNN/"
 VANILLA_MODEL_NAME = "mask_rcnn_coco.h5"
 COCO_MODEL_PATH = os.path.join(ROOT_DIR, "snapshots", VANILLA_MODEL_NAME)
-ABS_COCO_SNAPSHOT_PATH = os.path.join(MASK_RCNN_PATH, "snapshots", VANILLA_MODEL_NAME)
 
 # Directory to save logs and model checkpoints, if not provided
 # through the command line argument --logs
@@ -265,7 +264,7 @@ if __name__ == '__main__':
                         metavar="/path/to/sun/dataset/",
                         help='Directory of the Balloon dataset')
     parser.add_argument('--weights', required=False,
-                        default=ABS_COCO_SNAPSHOT_PATH,
+                        default=COCO_MODEL_PATH,
                         metavar="/path/to/weights.h5",
                         help="Path to weights .h5 file or 'coco'")
     parser.add_argument('--snapshot-mode', required=False,
@@ -292,6 +291,12 @@ if __name__ == '__main__':
                         metavar="Num epochs",
                         help='Number of epochs for fine tuning all layers',
                         type=int)
+    parser.add_argument('--lr', required=False,
+                        default=None,
+                        metavar="Learning rate",
+                        help='Learning rate, for fine tuning all layers it is devided by 5.',
+                        type=float)
+
     args = parser.parse_args()
     print('Arguments:\n ', args)
     if args.cvhci_mode is True:
@@ -304,11 +309,11 @@ if __name__ == '__main__':
 
     # Configurations
     config = SunConfig()
+    if args.lr:
+        config.LEARNING_RATE = float(args.lr)
+
     config.display()
-    print("Weights: ", args.weights)
-    print("Dataset: ", args.dataset)
-    print("Logs: ", args.logs)
-    # Initialize dataset
+
     datasets = dict()
     for dataset_name in ["train", "val", "test"]:
         datasets[dataset_name] = SunDataset(config=config)
@@ -322,7 +327,7 @@ if __name__ == '__main__':
             '\nLength val: ', datasets['val'].num_images)
 
         model = modellib.MaskRCNN(mode="training", config=config,
-                                    model_dir=args.logs)
+                                  model_dir=args.logs)
 
         weights_path = args.weights
 
@@ -336,11 +341,14 @@ if __name__ == '__main__':
                 "mrcnn_class_logits", "mrcnn_bbox_fc",
                 "mrcnn_bbox", "mrcnn_mask"])
 
-        #RandAugment applies random augmentation techniques chosen from a wide range of augmentation
-        augmentation = imgaug.augmenters.Sometimes(0.4, [
-            imgaug.augmenters.RandAugment(n=config.AUGMENTATION_NUM, m=config.AUGMENTATION_STRENGTH)
-        ])    # Train or evaluate
-    if args.command == "train" and args.weights == ABS_COCO_SNAPSHOT_PATH:
+        # #RandAugment applies random augmentation techniques chosen from a wide range of augmentation
+        # augmentation = imgaug.augmenters.Sometimes(0.4, [
+        #     imgaug.augmenters.RandAugment(n=config.AUGMENTATION_NUM, m=config.AUGMENTATION_STRENGTH)
+        # ])    # Train or evaluate
+        # print(f'\n\n---AUGMENTATION---: \nStrength: {config.AUGMENTATION_STRENGTH}\nNumber: {config.AUGMENTATION_NUM}')
+        augmentation = None
+        
+    if args.command == "train" and args.weights == COCO_MODEL_PATH:
         # *** This training schedule is an example. Update to your needs ***
         # Since we're using a very small dataset, and starting from
         # COCO trained weights, we don't need to train too long. Also,

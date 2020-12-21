@@ -33,21 +33,14 @@ def evaluate_sun(args, dataset):
                             config=inference_config,
                             model_dir=args.logs)
 
-    # Get path to saved weights
-    # Either set a specific path or find last trained weights
-    # model_path = os.path.join(ROOT_DIR, ".h5 file name here")
-    if not args.weights:
-        model_path = model.find_last()
-    else: 
-        model_path = args.weights
+    model_path = args.weights
 
     # Load trained weights
     print("Loading weights from ", model_path)
     model.load_weights(model_path, by_name=True)
     image_ids = dataset.image_ids
     APs = []
-    sum_aps = 0.0
-    num_aps = 0
+
     for image_id in image_ids:
         # Load image and ground truth data
         image, image_meta, gt_class_id, gt_bbox, gt_mask =\
@@ -62,14 +55,9 @@ def evaluate_sun(args, dataset):
             utils.compute_ap(gt_bbox, gt_class_id, gt_mask,
                             r["rois"], r["class_ids"], r["scores"], r['masks'])
 
-        if type(AP) is float or type(AP) is np.float64 and not math.isnan(AP):
+        # AP can be nan, check to not include those values
+        if (type(AP) is float or type(AP) is np.float64) and not math.isnan(AP):
             APs.append(float(AP))
-
-    for single_ap in APs:
-        sum_aps += float(single_ap)
-        num_aps += 1
 
     print("Num aps analyzed: ", len(APs))
     print("mAP: ", sum(APs) / len(APs))
-    print(sum_aps / num_aps)
-

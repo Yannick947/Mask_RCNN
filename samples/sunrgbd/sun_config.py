@@ -28,7 +28,7 @@ class SunConfig(Config):
     GPU_COUNT = 1
 
     # Into 12GB GPU memory, can fit two images.
-    IMAGES_PER_GPU = 2
+    IMAGES_PER_GPU = 3
 
     # Number of classes (including background)
     NUM_CLASSES = 1 + len(CLASSES)  # Background + num_classes
@@ -37,8 +37,8 @@ class SunConfig(Config):
     DETECTION_MIN_CONFIDENCE = 0.9
 
     #Augmentation Config
-    AUGMENTATION_NUM = 1
-    AUGMENTATION_STRENGTH = 3
+    AUGMENTATION_NUM = 0
+    AUGMENTATION_STRENGTH = 0
 
 class InferenceConfig(SunConfig):
     GPU_COUNT = 1
