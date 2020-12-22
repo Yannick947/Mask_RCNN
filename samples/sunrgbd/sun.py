@@ -60,7 +60,6 @@ COCO_MODEL_PATH = os.path.join(ROOT_DIR, "snapshots", VANILLA_MODEL_NAME)
 
 # Directory to save logs and model checkpoints, if not provided
 # through the command line argument --logs
-DEFAULT_LOGS_DIR = os.path.join(ROOT_DIR, "logs")
 IGNORE_IMAGES_PATH = './skip_image_paths.txt'
 
 ############################################################
@@ -275,12 +274,6 @@ if __name__ == '__main__':
                         default=DEFAULT_LOGS_DIR,
                         metavar="/path/to/logs/",
                         help='Logs and checkpoints directory (default=logs/)')
-    parser.add_argument('--image', required=False,
-                        metavar="path or URL to image",
-                        help='Image to apply the color splash effect on')
-    parser.add_argument('--video', required=False,
-                        metavar="path or URL to video",
-                        help='Video to apply the color splash effect on')
     parser.add_argument('--cvhci-mode', required=False,
                         default=False,
                         metavar="<True|False>",
@@ -341,12 +334,12 @@ if __name__ == '__main__':
                 "mrcnn_class_logits", "mrcnn_bbox_fc",
                 "mrcnn_bbox", "mrcnn_mask"])
 
-        # #RandAugment applies random augmentation techniques chosen from a wide range of augmentation
-        # augmentation = imgaug.augmenters.Sometimes(0.4, [
-        #     imgaug.augmenters.RandAugment(n=config.AUGMENTATION_NUM, m=config.AUGMENTATION_STRENGTH)
-        # ])    # Train or evaluate
-        # print(f'\n\n---AUGMENTATION---: \nStrength: {config.AUGMENTATION_STRENGTH}\nNumber: {config.AUGMENTATION_NUM}')
-        augmentation = None
+        #RandAugment applies random augmentation techniques chosen from a wide range of augmentation
+        augmentation = imgaug.augmenters.Sometimes(0.4, [
+            imgaug.augmenters.RandAugment(n=config.AUGMENTATION_NUM, m=config.AUGMENTATION_STRENGTH)
+        ])    # Train or evaluate
+        print(f'\n\n---AUGMENTATION---: \nStrength: {config.AUGMENTATION_STRENGTH}\nNumber: {config.AUGMENTATION_NUM}')
+        # augmentation = None
         
     if args.command == "train" and args.weights == COCO_MODEL_PATH:
         # *** This training schedule is an example. Update to your needs ***
