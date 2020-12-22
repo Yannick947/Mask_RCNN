@@ -1709,14 +1709,17 @@ class DataGenerator(Sequence):
         temp_batch_idxs = [self.temp_indexes[i] for i in temp_batch_idxs]
 
         try: 
-            return self.get_sample(temp_batch_idxs)
+            if self.config.depth_mode:
+                return self.get_sample(temp_batch_idxs)
+            else:
+                return self.get_sample(temp_batch_idxs)
 
         except KeyboardInterrupt:
             raise
 
         except Exception as e:
             # Log it and skip the image
-            print('Exception occured', e)
+            print('Exception occured: ', e)
 
     def get_sample(self, temp_idxs):
 

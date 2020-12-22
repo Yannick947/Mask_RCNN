@@ -18,7 +18,7 @@ class LRTensorBoard(TensorBoard):
         #Cast logs to np.float to fix error
         logs.update({'lr': np.float_(K.eval(self.model.optimizer.lr))})
         logs.update({'Augmentation strength': np.float_(SunConfig.AUGMENTATION_STRENGTH)})
-        logs.update({'Augmentation num': np.float_(SunConfig.AUGMENTATION_NUM)})
+        logs.update({'Augmentation num': np.float_(SunConfig.AUGMENTATION_NUM)})        
 
         super().on_epoch_end(epoch, logs)
 

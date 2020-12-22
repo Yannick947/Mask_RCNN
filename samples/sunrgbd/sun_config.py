@@ -1,7 +1,17 @@
+import sys
+import os
+
 from mrcnn.config import Config
 
-
+ANNOTATION_FILENAME = 'via_regions_sunrgbd.json'
 CLASSES = ['bed', 'tool', 'desk', 'chair', 'table', 'wardrobe', 'sofa', 'bookcase']
+IGNORE_IMAGES_PATH = './skip_image_paths.txt'
+
+# Root directory of the project
+ROOT_DIR = os.path.abspath('./')
+
+# Import Mask RCNN
+sys.path.append(ROOT_DIR)  # To find local version of the library
 
 try:  
     print('Try to set gpu ressources ...')
@@ -22,6 +32,13 @@ class SunConfig(Config):
     """Configuration for training on the sun dataset.
     Derives from the base Config class and overrides some values.
     """
+
+    def __init__(self, depth_mode=True):
+        self.depth_mode = depth_mode
+        if depth_mode: 
+            self.IMAGE_CHANNEL_COUNT = 4
+        super().__init__()
+            
     # Give the configuration a recognizable name
     NAME = "sun"
     # NUMBER OF GPUs to use. When using only a CPU, this needs to be set to 1.
@@ -43,3 +60,4 @@ class SunConfig(Config):
 class InferenceConfig(SunConfig):
     GPU_COUNT = 1
     IMAGES_PER_GPU = 1
+
