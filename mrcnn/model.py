@@ -2276,8 +2276,10 @@ class MaskRCNN():
             # Epoch number in file is 1-based, and in Keras code it's 0-based.
             # So, adjust for that then increment by one to start from the next epoch
             # Take the numbers from the logged weights as epoch
-            self.epoch = int(model_path[-6:-3])
-            
+            try:
+                self.epoch = int(model_path[-6:-3])
+            except: 
+                self.epoch = 0
             print('Re-starting from epoch %d' % self.epoch, ' in directory ', dirname)
 
         # Directory for training logs

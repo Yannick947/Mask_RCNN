@@ -38,7 +38,7 @@ class SunConfig(Config):
 
     #Augmentation Config
     AUGMENTATION_NUM = 2
-    AUGMENTATION_STRENGTH = 7
+    AUGMENTATION_STRENGTH = 3
 
 class InferenceConfig(SunConfig):
     GPU_COUNT = 1

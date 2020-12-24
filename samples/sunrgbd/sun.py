@@ -43,7 +43,7 @@ ROOT_DIR = os.path.abspath('./')
 sys.path.append(ROOT_DIR)  # To find local version of the library
 from mrcnn import model as modellib, utils
 from samples.sunrgbd.sun_config import SunConfig, InferenceConfig, CLASSES
-from samples.sunrgbd.eval_sun import evaluate_sun
+from samples.sunrgbd.eval_sun import mAPEvaluator
 
 # Directory to save logs and model checkpoints, if not provided
 # through the command line argument --logs
@@ -377,5 +377,9 @@ if __name__ == '__main__':
                     augmentation=augmentation)
                     
     if args.command == 'evaluate':
-        evaluate_sun(args, datasets['test'])
+        evaluator = mAPEvaluator(os.path.join(args.logs, 'best_models'), datasets)
+        evaluator.evaluate_all(dataset_name='test')
+        evaluator.evaluate_all(dataset_name='val')
+        evaluator.save_results()
+
 
