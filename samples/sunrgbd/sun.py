@@ -36,10 +36,10 @@ import skimage.draw
 import imgaug
 
 from samples.sunrgbd.sun_config import ROOT_DIR, ANNOTATION_FILENAME, IGNORE_IMAGES_PATH
-from samples.sunrgbd.sun_config import SunConfig, InferenceConfig
 from samples.sunrgbd.dataset import SunDataset2D, SunDataset3D
-from samples.sunrgbd.eval_sun import evaluate_sun
+from samples.sunrgbd.eval_sun import mAPEvaluator
 from mrcnn import model as modellib, utils
+from samples.sunrgbd.sun_config import SunConfig, InferenceConfig, CLASSES
 
 # Directory to save logs and model checkpoints, if not provided
 # through the command line argument --logs
@@ -83,12 +83,6 @@ if __name__ == '__main__':
                         default=DEFAULT_LOGS_DIR,
                         metavar="/path/to/logs/",
                         help='Logs and checkpoints directory (default=logs/)')
-    parser.add_argument('--image', required=False,
-                        metavar="path or URL to image",
-                        help='Image to apply the color splash effect on')
-    parser.add_argument('--video', required=False,
-                        metavar="path or URL to video",
-                        help='Video to apply the color splash effect on')
     parser.add_argument('--cvhci-mode', required=False,
                         default=False,
                         metavar="<True|False>",
@@ -170,7 +164,7 @@ if __name__ == '__main__':
             imgaug.augmenters.RandAugment(n=config.AUGMENTATION_NUM, m=config.AUGMENTATION_STRENGTH)
         ])    # Train or evaluate
         print(f'\n\n---AUGMENTATION---: \nStrength: {config.AUGMENTATION_STRENGTH}\nNumber: {config.AUGMENTATION_NUM}')
-        augmentation = None
+        # augmentation = None
         
     if args.command == "train" and args.weights == COCO_MODEL_PATH:
         # *** This training schedule is an example. Update to your needs ***
@@ -208,5 +202,7 @@ if __name__ == '__main__':
                     augmentation=augmentation)
                     
     if args.command == 'evaluate':
-        evaluate_sun(args, datasets['test'])
-
+        evaluator = mAPEvaluator(os.path.join(args.logs, 'best_models'), datasets)
+        evaluator.evaluate_all(dataset_name='test')
+        evaluator.evaluate_all(dataset_name='val')
+        evaluator.save_results()

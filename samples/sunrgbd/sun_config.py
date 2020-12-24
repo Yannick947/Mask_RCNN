@@ -54,8 +54,8 @@ class SunConfig(Config):
     DETECTION_MIN_CONFIDENCE = 0.9
 
     #Augmentation Config
-    AUGMENTATION_NUM = 0
-    AUGMENTATION_STRENGTH = 0
+    AUGMENTATION_NUM = 2
+    AUGMENTATION_STRENGTH = 3
 
 class InferenceConfig(SunConfig):
     GPU_COUNT = 1
