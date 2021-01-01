@@ -100,8 +100,8 @@ if __name__ == '__main__':
                         type=float)
     parser.add_argument('--depth-mode', required=False,
                         default=False,
-                        metavar="Learning rate",
-                        help='Learning rate, for fine tuning all layers it is devided by 5.',
+                        metavar="Depth mode",
+                        help='Whether to train with depth images',
                         type=bool)
 
     args = parser.parse_args()
@@ -116,10 +116,10 @@ if __name__ == '__main__':
     datasets = dict()
 
     # Configurations
-    if args.depth_mode: 
-        config = SunConfig(depth_mode=True)
-    else: 
-        config = SunConfig(depth_mode=False)
+    print('Depth mode ', args.depth_mode)
+    config = SunConfig(depth_mode=args.depth_mode)
+    config.display()
+
 
     for dataset_name in ["train", "val", "test"]:
         if args.depth_mode:
@@ -133,7 +133,6 @@ if __name__ == '__main__':
     if args.lr:
         config.LEARNING_RATE = float(args.lr)
 
-    config.display()
 
     if args.command == "train":
 
@@ -160,13 +159,13 @@ if __name__ == '__main__':
             model.load_weights(weights_path, by_name=True, exclude=exclude_layers)
 
         #RandAugment applies random augmentation techniques chosen from a wide range of augmentation
-        augmentation = imgaug.augmenters.Sometimes(0.4, [
-            imgaug.augmenters.RandAugment(n=config.AUGMENTATION_NUM, m=config.AUGMENTATION_STRENGTH)
-        ])    # Train or evaluate
-        print(f'\n\n---AUGMENTATION---: \nStrength: {config.AUGMENTATION_STRENGTH}\nNumber: {config.AUGMENTATION_NUM}')
-        # augmentation = None
+        # augmentation = imgaug.augmenters.Sometimes(0.4, [
+        #     imgaug.augmenters.RandAugment(n=config.AUGMENTATION_NUM, m=config.AUGMENTATION_STRENGTH)
+        # ])    # Train or evaluate
+        # print(f'\n\n---AUGMENTATION---: \nStrength: {config.AUGMENTATION_STRENGTH}\nNumber: {config.AUGMENTATION_NUM}')
+        augmentation = None
         
-    if args.command == "train" and args.weights == COCO_MODEL_PATH:
+    if args.command == "train" and args.weights == COCO_MODEL_PATH and not args.depth_mode:
         # *** This training schedule is an example. Update to your needs ***
         # Since we're using a very small dataset, and starting from
         # COCO trained weights, we don't need to train too long. Also,
@@ -202,7 +201,8 @@ if __name__ == '__main__':
                     augmentation=augmentation)
                     
     if args.command == 'evaluate':
-        evaluator = mAPEvaluator(os.path.join(args.logs, 'best_models'), datasets)
+        evaluator = mAPEvaluator(os.path.join(args.logs, 'local_best_models'), datasets)
+        evaluator.evaluate_per_class(dataset_name='test')
         evaluator.evaluate_all(dataset_name='test')
         evaluator.evaluate_all(dataset_name='val')
         evaluator.save_results()

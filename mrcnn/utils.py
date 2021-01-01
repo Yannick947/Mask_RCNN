@@ -654,7 +654,7 @@ def trim_zeros(x):
 
 
 def compute_matches(gt_boxes, gt_class_ids, gt_masks,
-                    pred_boxes, pred_class_ids, pred_scores, pred_masks,
+                    pred_boxes, pred_class_ids, pred_scores, pred_masks, class_id=None,
                     iou_threshold=0.5, score_threshold=0.0):
     """Finds matches between prediction and ground truth instances.
 
@@ -667,6 +667,15 @@ def compute_matches(gt_boxes, gt_class_ids, gt_masks,
     """
     # Trim zero padding
     # TODO: cleaner to do zero unpadding upstream
+    if class_id is not None:
+        gt_boxes=gt_boxes[np.where(gt_class_ids==class_id)]
+        gt_masks=gt_masks[:,:,gt_class_ids==class_id]
+        pred_boxes=pred_boxes[np.where(pred_class_ids==class_id)]
+        pred_scores=pred_scores[np.where(pred_class_ids==class_id)]
+        pred_masks=pred_masks[:,:,pred_class_ids==class_id]
+        pred_class_ids=np.delete(pred_class_ids,np.where(pred_class_ids!=class_id))
+        gt_class_ids=np.delete(gt_class_ids,np.where(gt_class_ids!=class_id))
+
     gt_boxes = trim_zeros(gt_boxes)
     gt_masks = gt_masks[..., :gt_boxes.shape[0]]
     pred_boxes = trim_zeros(pred_boxes)
