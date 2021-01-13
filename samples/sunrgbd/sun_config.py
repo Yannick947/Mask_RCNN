@@ -1,11 +1,18 @@
 import sys
 import os
 
+import numpy as np
+
 from mrcnn.config import Config
 
 ANNOTATION_FILENAME = 'via_regions_sunrgbd.json'
-CLASSES = ['bed', 'tool', 'desk', 'chair', 'table', 'wardrobe', 'sofa', 'bookcase']
-IGNORE_IMAGES_PATH = './skip_image_paths.txt'
+
+# removed 'tool', put 'wardrobe' and 'desk' to COMBINED_CLASSES
+CLASSES = ['bed', 'chair', 'table', 'sofa', 'bookcase'] 
+
+COMBINED_CLASSES = {'wardrobe':'bookcase', 'desk': 'table'}
+ 
+IGNORE_IMAGES_PATH = os.path.abspath('./skip_image_paths.txt')
 
 # Root directory of the project
 ROOT_DIR = os.path.abspath('./')
@@ -32,11 +39,17 @@ class SunConfig(Config):
     """Configuration for training on the sun dataset.
     Derives from the base Config class and overrides some values.
     """
+    # Mean of depth channel was calculated with tests/get_mean_channels
+    # Other means of channels were calculated as well but are mostly similar to the provided ones
+    # and are therefore not changed
+    MEAN_DEPTH_VALUE = 61
 
-    def __init__(self, depth_mode=True):
+    def __init__(self, depth_mode=False):
         self.depth_mode = depth_mode
         if depth_mode: 
+            print('Depth mode enabled')
             self.IMAGE_CHANNEL_COUNT = 4
+            self.MEAN_PIXEL = np.append(self.MEAN_PIXEL, self.MEAN_DEPTH_VALUE)
         super().__init__()
             
     # Give the configuration a recognizable name
@@ -60,4 +73,7 @@ class SunConfig(Config):
 class InferenceConfig(SunConfig):
     GPU_COUNT = 1
     IMAGES_PER_GPU = 1
+
+    def __init__(self, depth_mode): 
+        super().__init__(depth_mode=depth_mode)
 
