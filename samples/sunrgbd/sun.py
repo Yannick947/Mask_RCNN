@@ -112,7 +112,7 @@ if __name__ == '__main__':
     elif not args.dataset: 
         args.dataset = LOCAL_PATH_DATASET
 
-    assert args.dataset, "Argument --dataset is required for training"
+    assert args.dataset, "Argument --dataset is required"
     datasets = dict()
 
     # Configurations
@@ -121,21 +121,19 @@ if __name__ == '__main__':
     config.display()
 
 
-    for dataset_name in ["train", "val", "test"]:
-        if args.depth_mode:
-            datasets[dataset_name] = SunDataset3D(config=config)
-        else: 
-            datasets[dataset_name] = SunDataset2D(config=config)
-
-        datasets[dataset_name].load_sun(args.dataset, dataset_name)
-        datasets[dataset_name].prepare()
-
     if args.lr:
         config.LEARNING_RATE = float(args.lr)
 
-
     if args.command == "train":
 
+        for dataset_name in ["train", "val", "test"]:
+            if args.depth_mode:
+                datasets[dataset_name] = SunDataset3D(config=config)
+            else: 
+                datasets[dataset_name] = SunDataset2D(config=config)
+
+            datasets[dataset_name].load_sun(args.dataset, dataset_name)
+            datasets[dataset_name].prepare()
         print('Length train: ', datasets['train'].num_images,
             '\nLength test', datasets['test'].num_images, 
             '\nLength val: ', datasets['val'].num_images)
@@ -158,21 +156,21 @@ if __name__ == '__main__':
                 exclude_layers.extend(["conv1"])
             model.load_weights(weights_path, by_name=True, exclude=exclude_layers)
 
-        #RandAugment applies random augmentation techniques chosen from a wide range of augmentation
-        # augmentation = imgaug.augmenters.Sometimes(0.4, [
-        #     imgaug.augmenters.RandAugment(n=config.AUGMENTATION_NUM, m=config.AUGMENTATION_STRENGTH)
-        # ])    # Train or evaluate
-        # print(f'\n\n---AUGMENTATION---: \nStrength: {config.AUGMENTATION_STRENGTH}\nNumber: {config.AUGMENTATION_NUM}')
-        augmentation = None
+        if args.depth_mode: 
+            augmentation = None
         
-    if args.command == "train" and args.weights == COCO_MODEL_PATH and not args.depth_mode:
-        # *** This training schedule is an example. Update to your needs ***
-        # Since we're using a very small dataset, and starting from
-        # COCO trained weights, we don't need to train too long. Also,
-        # no need to train all layers, just the heads should do it.
+        else:
+            #RandAugment applies random augmentation techniques chosen from a wide range of augmentation
+            augmentation = imgaug.augmenters.Sometimes(0.5, [
+                imgaug.augmenters.RandAugment(n=config.AUGMENTATION_NUM, m=config.AUGMENTATION_STRENGTH)
+            ])
+            print(f'\n\n---AUGMENTATION---: \nStrength: {config.AUGMENTATION_STRENGTH}\nNumber: {config.AUGMENTATION_NUM}')
+        
+    if args.command == "train" and args.weights == COCO_MODEL_PATH:
         print("\n\n --- Training network heads --- \n\n")
 
         # Training - Stage 1
+        
         model.train(datasets["train"], datasets["val"],
                     learning_rate=config.LEARNING_RATE,
                     epochs=4,
@@ -201,8 +199,15 @@ if __name__ == '__main__':
                     augmentation=augmentation)
                     
     if args.command == 'evaluate':
-        evaluator = mAPEvaluator(os.path.join(args.logs, 'local_best_models'), datasets)
-        evaluator.evaluate_per_class(dataset_name='test')
-        evaluator.evaluate_all(dataset_name='test')
-        evaluator.evaluate_all(dataset_name='val')
-        evaluator.save_results()
+
+        eval_model_dir = os.path.join(args.logs, 'reduced_classes/best_models')
+        model_names = list()
+
+        for weights_name in os.listdir(eval_model_dir):
+            if weights_name[-3:] == '.h5':
+                model_names.append(weights_name)
+        
+        for depth_mode in [True, False]:
+            evaluator = mAPEvaluator(eval_dir=eval_model_dir, depth_mode=depth_mode, dataset_dir=args.dataset, model_names=model_names)
+            evaluator.evaluate(per_class_eval=True, dataset_name='test')
+            evaluator.save_results()
