@@ -30,7 +30,7 @@ from distutils.version import LooseVersion
 assert LooseVersion(tf.__version__) >= LooseVersion("1.3")
 assert LooseVersion(keras.__version__) >= LooseVersion('2.0.8')
 
-from samples.sunrgbd.eval_sun import LRTensorBoard
+from samples.sunrgbd.callbacks import LRTensorBoard
 
 ############################################################
 #  Utility Functions
@@ -1709,11 +1709,8 @@ class DataGenerator(Sequence):
         temp_batch_idxs = [self.temp_indexes[i] for i in temp_batch_idxs]
 
         try: 
-            if self.config.depth_mode:
-                return self.get_sample(temp_batch_idxs)
-            else:
-                return self.get_sample(temp_batch_idxs)
-
+            return self.get_sample(temp_batch_idxs)
+            
         except KeyboardInterrupt:
             raise
 
@@ -2248,6 +2245,11 @@ class MaskRCNN():
                 continue
             # Is it trainable?
             trainable = bool(re.fullmatch(layer_regex, layer.name))
+
+            if layer.name == 'conv1' and hasattr(self.config, 'depth_mode') and self.config.depth_mode:
+                trainable = True
+                print('Set conv1 layer to trainable, because training in depth mode requires so')
+
             # Update layer. If layer is a container, update inner layer.
             if layer.__class__.__name__ == 'TimeDistributed':
                 layer.layer.trainable = trainable
