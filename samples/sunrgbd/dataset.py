@@ -4,19 +4,22 @@ import os
 
 import numpy as np
 import skimage
+import cv2 
 
-from mrcnn import model as modellib, utils
-from samples.sunrgbd.sun_config import CLASSES, IGNORE_IMAGES_PATH, ANNOTATION_FILENAME, ROOT_DIR
+from mrcnn.utils import Dataset
+from samples.sunrgbd.sun_config import CLASSES, IGNORE_IMAGES_PATH, ANNOTATION_FILENAME, ROOT_DIR, COMBINED_CLASSES
 
 
-class SunDataset(utils.Dataset):
-    def __init__(self, config=None):
+class SunDataset(Dataset):
+    def __init__(self, config=None, skip_images_path=None):
         self.config = config
         self.class_to_id_map = dict()
         for class_id_i, class_name in enumerate(CLASSES): 
             self.class_to_id_map[class_name] = class_id_i + 1
-
-        self.ignore_paths = self.__get_ignore_pahts()
+        if skip_images_path is None:
+            self.ignore_paths = self.__get_ignore_pahts()
+        else: 
+            self.ignore_paths=skip_images_path
         super().__init__()
 
     def __get_ignore_pahts(self):
@@ -59,7 +62,19 @@ class SunDataset(utils.Dataset):
             image_path = os.path.join(dataset_dir, a_val['path_to_image'])
             class_ids = list()
             for class_name in a_val['classes']:
+
+                #If a class exists which shall be mapped to the current class append the mapped class
+                mapped_class = COMBINED_CLASSES.get(class_name)
+                if class_name not in CLASSES and mapped_class:
+                    class_name = mapped_class
+                    
+                elif class_name not in CLASSES and not mapped_class:
+                    continue
+
                 class_ids.append(self.class_to_id_map[class_name])
+
+            if len(class_ids) == 0: 
+                continue
 
             self.add_image(
                 source='sun',
@@ -71,7 +86,7 @@ class SunDataset(utils.Dataset):
 
     def load_mask(self, image_id):
         """Generate instance masks for an image.
-       Returns:
+        Returns:
         masks: A bool array of shape [height, width, instance count] with
             one mask per instance.
         class_ids: a 1D array of class IDs of the instance masks.
@@ -145,7 +160,8 @@ class SunDataset3D(SunDataset):
         if rgb_image.shape[-1] == 4:
             rgb_image = rgb_image[..., :3]
 
-        depth_image = skimage.io.imread(depth_path, plugin='pil')
+        # depth_image = skimage.io.imread(depth_path, as_gray=True) #Returns weird values
+        depth_image = cv2.imread(depth_path, flags=cv2.IMREAD_GRAYSCALE)
         #depth image needs third dimension with length 1 so that numpy can stack it with rgb
         depth_image = np.expand_dims(depth_image, 2)
         

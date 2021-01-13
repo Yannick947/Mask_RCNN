@@ -18,24 +18,35 @@ from samples.sunrgbd.sun_config import ROOT_DIR, ANNOTATION_FILENAME, IGNORE_IMA
 
 LOCAL_PATH_DATASET = "C:/Users/Yannick/Downloads/SUNRGBD"
 
-DEBUG_DATASET = "test" # Can be 'train', 'val' or 'test
+DEBUG_DATASET = "train" 
 DEPTH_MODE = True
+
+means = list()
 def main():
+
     if DEPTH_MODE: 
+        num_channels = 4
         dataset = SunDataset3D(SunConfig(depth_mode=DEPTH_MODE))
     else:
+        num_channels = 3
         dataset = SunDataset2D(SunConfig())
 
     dataset.load_sun(LOCAL_PATH_DATASET, DEBUG_DATASET)
     dataset.prepare()
-    gen = DataGenerator(dataset=dataset,
-                        config=SunConfig(depth_mode=DEPTH_MODE),
-                        shuffle=True,
-                        augmentation=False,
-                        batch_size=2)
 
-    for i in range(len(gen)):
-        inputs, outputs = gen[i]
+    for _ in range(num_channels):
+        means.append(list())
+
+    for idx in dataset._image_ids:
+        try:
+            image = dataset.load_image(idx)
+        except: 
+            continue
+        for channel in range(num_channels):
+            means[channel].append(np.mean(image[:,:,channel]))
+
+    for channel in range(num_channels):
+        print('Mean for channel ', channel, ' is ', np.mean(means[channel]))
 
 if __name__ == '__main__':
     main()
