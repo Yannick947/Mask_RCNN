@@ -10,7 +10,7 @@ ANNOTATION_FILENAME = 'via_regions_sunrgbd.json'
 # removed 'tool', put 'wardrobe' and 'desk' to COMBINED_CLASSES
 CLASSES = ['bed', 'chair', 'table', 'sofa', 'bookcase'] 
 
-COMBINED_CLASSES = {'wardrobe':'bookcase', 'desk': 'table'}
+COMBINED_CLASSES = {'desk': 'table'}
  
 IGNORE_IMAGES_PATH = os.path.abspath('./skip_image_paths.txt')
 
@@ -51,6 +51,8 @@ class SunConfig(Config):
             self.IMAGE_CHANNEL_COUNT = 4
             self.MEAN_PIXEL = np.append(self.MEAN_PIXEL, self.MEAN_DEPTH_VALUE)
         super().__init__()
+        
+        print('Following classes are used: ', *CLASSES)
             
     # Give the configuration a recognizable name
     NAME = "sun"
@@ -66,9 +68,6 @@ class SunConfig(Config):
     # Skip detections with < 90% confidence
     DETECTION_MIN_CONFIDENCE = 0.9
 
-    #Augmentation Config
-    AUGMENTATION_NUM = 2
-    AUGMENTATION_STRENGTH = 3
 
 class InferenceConfig(SunConfig):
     GPU_COUNT = 1
