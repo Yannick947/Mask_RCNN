@@ -103,13 +103,23 @@ if __name__ == '__main__':
                         metavar="Depth mode",
                         help='Whether to train with depth images',
                         type=bool)
+    parser.add_argument('--augm-num', required=False,
+                        default=0,
+                        metavar="Num epochs",
+                        help='Number of different augmentations applied to one image.',
+                        type=int)
+    parser.add_argument('--augm-strength', required=False,
+                        default=0,
+                        metavar="Num epochs",
+                        help='Strength of augmentation applied to an image.',
+                        type=int)
 
     args = parser.parse_args()
     print('Arguments:\n ', args)
     if args.cvhci_mode is True:
         print('cvhci mode is ', args.cvhci_mode)
         args.dataset = CVHCI_DATASET_PATH
-    elif not args.dataset: 
+    elif not args.dataset:
         args.dataset = LOCAL_PATH_DATASET
 
     assert args.dataset, "Argument --dataset is required"
@@ -120,7 +130,6 @@ if __name__ == '__main__':
     config = SunConfig(depth_mode=args.depth_mode)
     config.display()
 
-
     if args.lr:
         config.LEARNING_RATE = float(args.lr)
 
@@ -129,14 +138,14 @@ if __name__ == '__main__':
         for dataset_name in ["train", "val", "test"]:
             if args.depth_mode:
                 datasets[dataset_name] = SunDataset3D(config=config)
-            else: 
+            else:
                 datasets[dataset_name] = SunDataset2D(config=config)
 
             datasets[dataset_name].load_sun(args.dataset, dataset_name)
             datasets[dataset_name].prepare()
         print('Length train: ', datasets['train'].num_images,
-            '\nLength test', datasets['test'].num_images, 
-            '\nLength val: ', datasets['val'].num_images)
+              '\nLength test', datasets['test'].num_images,
+              '\nLength val: ', datasets['val'].num_images)
 
         model = modellib.MaskRCNN(mode="training", config=config,
                                   model_dir=args.logs)
@@ -147,33 +156,34 @@ if __name__ == '__main__':
         print("Loading weights ", weights_path)
         try:
             model.load_weights(weights_path, by_name=True)
-        except ValueError: 
-            print('Dimensions of input and output layers did not match, exclude these layers..')
+        except ValueError:
+            print(
+                'Dimensions of input and output layers did not match, exclude these layers..')
             exclude_layers = [
                 "mrcnn_class_logits", "mrcnn_bbox_fc",
                 "mrcnn_bbox", "mrcnn_mask"]
-            if args.depth_mode: 
+            if args.depth_mode:
                 exclude_layers.extend(["conv1"])
-            model.load_weights(weights_path, by_name=True, exclude=exclude_layers)
+            model.load_weights(weights_path, by_name=True,
+                               exclude=exclude_layers)
 
-        if args.depth_mode: 
-            augmentation = None
-        
-        else:
-            #RandAugment applies random augmentation techniques chosen from a wide range of augmentation
-            augmentation = imgaug.augmenters.Sometimes(0.5, [
-                imgaug.augmenters.RandAugment(n=config.AUGMENTATION_NUM, m=config.AUGMENTATION_STRENGTH)
-            ])
-            print(f'\n\n---AUGMENTATION---: \nStrength: {config.AUGMENTATION_STRENGTH}\nNumber: {config.AUGMENTATION_NUM}')
-        
+        # RandAugment applies random augmentation techniques chosen from a wide range of augmentation
+        augmentation = imgaug.augmenters.Sometimes(0.5, [
+            imgaug.augmenters.RandAugment(
+                n=args.augm_num, m=args.augm_strength)
+        ])
+        print(
+            f'\n\n---AUGMENTATION---: \nStrength: {args.augm_num}\nNumber: {args.augm_strength}')
+
     if args.command == "train" and args.weights == COCO_MODEL_PATH:
         print("\n\n --- Training network heads --- \n\n")
 
         # Training - Stage 1
-        
+
         model.train(datasets["train"], datasets["val"],
+                    args=args,
                     learning_rate=config.LEARNING_RATE,
-                    epochs=4,
+                    epochs=3,
                     layers='heads')
 
         # Training - Stage 2
@@ -181,10 +191,11 @@ if __name__ == '__main__':
         print("\n\n --- Fine tune Resnet stage 4 and up --- \n\n")
         model.train(datasets["train"], datasets["val"],
                     learning_rate=config.LEARNING_RATE,
-                    epochs=3,
+                    epochs=4,
                     layers='4+',
-                    augmentation=augmentation)
-    
+                    augmentation=augmentation, 
+                    args=args)
+
     if args.command == 'train' and args.epochs > 0:
         print('Starting with fine tuning the whole network.')
         # Training - Stage 3
@@ -196,8 +207,9 @@ if __name__ == '__main__':
                     learning_rate=config.LEARNING_RATE / 5,
                     epochs=epochs,
                     layers='all',
-                    augmentation=augmentation)
-                    
+                    augmentation=augmentation, 
+                    args=args)
+
     if args.command == 'evaluate':
 
         eval_model_dir = os.path.join(args.logs, 'reduced_classes/best_models')
@@ -206,8 +218,9 @@ if __name__ == '__main__':
         for weights_name in os.listdir(eval_model_dir):
             if weights_name[-3:] == '.h5':
                 model_names.append(weights_name)
-        
+
         for depth_mode in [True, False]:
-            evaluator = mAPEvaluator(eval_dir=eval_model_dir, depth_mode=depth_mode, dataset_dir=args.dataset, model_names=model_names)
+            evaluator = mAPEvaluator(eval_dir=eval_model_dir, depth_mode=depth_mode,
+                                     dataset_dir=args.dataset, model_names=model_names)
             evaluator.evaluate(per_class_eval=True, dataset_name='test')
             evaluator.save_results()
