@@ -1,23 +1,15 @@
 import os
 import sys
 import random
-import math
-import re
-import time
 
-import numpy as np
 import tensorflow as tf
-import matplotlib
 import matplotlib.pyplot as plt
-import matplotlib.patches as patches
 import skimage
 
 from samples.sunrgbd import sun, dataset, sun_config
 from mrcnn.model import log
 import mrcnn.model as modellib
-from mrcnn.visualize import display_images
 from mrcnn import visualize
-from mrcnn import utils
 
 ROOT_DIR = os.path.abspath("./")
 sys.path.append(ROOT_DIR)  # To find local version of the library
@@ -34,7 +26,7 @@ config.display()
 
 SUN_DIR = 'C:/Users/Yannick/Downloads/SUNRGBD/'
 SUN_WEIGHTS_PATH = os.path.join(
-    ROOT_DIR, 'logs/reduced_classes/best_models/strength3_num2_0007.h5')
+    ROOT_DIR, 'logs/reduced_classes/best_models/strength7_num2_0012.h5')
 IGNORE_IMAGES_PATH = os.path.abspath('../skip_image_paths.txt')
 
 sun.ROOT_DIR = ROOT_DIR
@@ -43,10 +35,6 @@ dataset.ROOT_DIR = ROOT_DIR
 
 
 DEVICE = "/cpu:0"  # /cpu:0 or /gpu:0
-
-# Inspect the model in training or inference modes
-# values: 'inference' or 'training'
-# TODO: code for 'training' test mode not ready yet
 TEST_MODE = "inference"
 
 
@@ -79,7 +67,6 @@ def main():
     config = InferenceConfig(depth_mode=DEPTH_MODE)
     config.BATCH_SIZE = 1
     config.DETECTION_MIN_CONFIDENCE = 0.8
-    config.display()
 
     with tf.device(DEVICE):
         model = modellib.MaskRCNN(mode="inference", model_dir=MODEL_DIR,
@@ -89,7 +76,7 @@ def main():
     if HOLOLENS_MODE:
         visualize_hololens(model)
     else:
-        vsiualize_sun(model)
+        visualize_sun(model)
 
 
 def visualize_hololens(model):
@@ -100,12 +87,10 @@ def visualize_hololens(model):
 
             results = model.detect([image], verbose=1)
             r = results[0]
-            visualize.display_instances(image, r['rois'], r['masks'], r['class_ids'],
+            visualize.display_instances(image, r['rois'], r['masks'],
+                                        r['class_ids'],
                                         CLASS_NAMES, r['scores'],
                                         title="Predictions")
-            # log("gt_class_id", gt_class_id)
-            # log("gt_bbox", gt_bbox)
-            # log("gt_mask", gt_mask)
 
 
 def visualize_sun(model):
@@ -137,7 +122,7 @@ def visualize_sun(model):
         ax = get_ax(1)
         r = results[0]
         print(r['scores'])
-        if depth_mode:
+        if DEPTH_MODE:
             image = image[:, :, :3]
         visualize.display_instances(image, r['rois'], r['masks'], r['class_ids'],
                                     sun_dataset.class_names, r['scores'], ax=ax,

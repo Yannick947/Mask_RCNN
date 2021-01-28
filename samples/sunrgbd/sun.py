@@ -28,18 +28,13 @@ Usage: import the module (see Jupyter notebooks for examples), or run from
 """
 
 import os
-import sys
-import json
-import datetime
-import numpy as np
-import skimage.draw
 import imgaug
 
-from samples.sunrgbd.sun_config import ROOT_DIR, ANNOTATION_FILENAME, IGNORE_IMAGES_PATH
+from samples.sunrgbd.sun_config import ROOT_DIR
 from samples.sunrgbd.dataset import SunDataset2D, SunDataset3D
 from samples.sunrgbd.eval_sun import mAPEvaluator
-from mrcnn import model as modellib, utils
-from samples.sunrgbd.sun_config import SunConfig, InferenceConfig, CLASSES
+from mrcnn import model as modellib
+from samples.sunrgbd.sun_config import SunConfig
 
 # Directory to save logs and model checkpoints, if not provided
 # through the command line argument --logs
@@ -222,5 +217,8 @@ if __name__ == '__main__':
         for depth_mode in [True, False]:
             evaluator = mAPEvaluator(eval_dir=eval_model_dir, depth_mode=depth_mode,
                                      dataset_dir=args.dataset, model_names=model_names)
+            evaluator.evaluate(per_class_eval=False, dataset_name='test')
             evaluator.evaluate(per_class_eval=True, dataset_name='test')
             evaluator.save_results()
+
+

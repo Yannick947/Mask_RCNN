@@ -8,10 +8,10 @@ from mrcnn.config import Config
 ANNOTATION_FILENAME = 'via_regions_sunrgbd.json'
 
 # removed 'tool', put 'wardrobe' and 'desk' to COMBINED_CLASSES
-CLASSES = ['bed', 'chair', 'table', 'sofa', 'bookcase'] 
+CLASSES = ['bed', 'chair', 'table', 'sofa', 'bookcase']
 
 COMBINED_CLASSES = {'desk': 'table'}
- 
+
 IGNORE_IMAGES_PATH = os.path.abspath('./skip_image_paths.txt')
 
 # Root directory of the project
@@ -20,7 +20,7 @@ ROOT_DIR = os.path.abspath('./')
 # Import Mask RCNN
 sys.path.append(ROOT_DIR)  # To find local version of the library
 
-try:  
+try:
     print('Try to set gpu ressources ...')
     import nvgpu
     available_gpus = nvgpu.available_gpus()
@@ -29,11 +29,14 @@ try:
         os.environ["CUDA_VISIBLE_DEVICES"] = available_gpus[0]
         print('Using GPU ', available_gpus[0])
 
-    else: 
+    else:
         print('No free gpu found, try later..')
         exit()
-except: 
+
+except Exception as e:
+    print(e)
     pass
+
 
 class SunConfig(Config):
     """Configuration for training on the sun dataset.
@@ -44,16 +47,22 @@ class SunConfig(Config):
     # and are therefore not changed
     MEAN_DEPTH_VALUE = 61
 
-    def __init__(self, depth_mode=False):
+    def __init__(self, depth_mode: bool = False):
+        """Initialize configuration of sunrgbd dataset.
+
+        Arguments: 
+            :param depth_mode: Flag to indicate whether depth channel (4th dimension) is available
+
+        """
         self.depth_mode = depth_mode
-        if depth_mode: 
+        if depth_mode:
             print('Depth mode enabled')
             self.IMAGE_CHANNEL_COUNT = 4
             self.MEAN_PIXEL = np.append(self.MEAN_PIXEL, self.MEAN_DEPTH_VALUE)
         super().__init__()
-        
+
         print('Following classes are used: ', *CLASSES)
-            
+
     # Give the configuration a recognizable name
     NAME = "sun"
     # NUMBER OF GPUs to use. When using only a CPU, this needs to be set to 1.
@@ -75,4 +84,3 @@ class InferenceConfig(SunConfig):
 
     def __init__(self, depth_mode): 
         super().__init__(depth_mode=depth_mode)
-
