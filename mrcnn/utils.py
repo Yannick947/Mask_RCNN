@@ -654,8 +654,8 @@ def trim_zeros(x):
 
 
 def compute_matches(gt_boxes, gt_class_ids, gt_masks,
-                    pred_boxes, pred_class_ids, pred_scores, pred_masks, class_id=None,
-                    iou_threshold=0.5, score_threshold=0.0):
+                    pred_boxes, pred_class_ids, pred_scores, pred_masks,
+                    iou_threshold=0.5, score_threshold=0.0, class_id=None):
     """Finds matches between prediction and ground truth instances.
 
     Returns:
@@ -723,7 +723,7 @@ def compute_matches(gt_boxes, gt_class_ids, gt_masks,
 
 def compute_ap(gt_boxes, gt_class_ids, gt_masks,
                pred_boxes, pred_class_ids, pred_scores, pred_masks,
-               iou_threshold=0.5):
+               iou_threshold=0.5, class_id=None):
     """Compute Average Precision at a set IoU threshold (default 0.5).
 
     Returns:
@@ -736,7 +736,7 @@ def compute_ap(gt_boxes, gt_class_ids, gt_masks,
     gt_match, pred_match, overlaps = compute_matches(
         gt_boxes, gt_class_ids, gt_masks,
         pred_boxes, pred_class_ids, pred_scores, pred_masks,
-        iou_threshold)
+        iou_threshold, class_id=class_id)
 
     # Compute precision and recall at each prediction box step
     precisions = np.cumsum(pred_match > -1) / (np.arange(len(pred_match)) + 1)
