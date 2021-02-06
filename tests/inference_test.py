@@ -14,8 +14,8 @@ from mrcnn import visualize
 ROOT_DIR = os.path.abspath("./")
 sys.path.append(ROOT_DIR)  # To find local version of the library
 MODEL_DIR = os.path.join(ROOT_DIR, "logs")
-HOLOLENS_MODE = True
-DEPTH_MODE = False
+HOLOLENS_MODE = False
+DEPTH_MODE = True
 HOLOLENS_IMAGE_PATHS = os.path.abspath("./images")
 
 CLASS_NAMES = ['BG']
@@ -26,7 +26,10 @@ config.display()
 
 SUN_DIR = 'C:/Users/Yannick/Downloads/SUNRGBD/'
 SUN_WEIGHTS_PATH = os.path.join(
-    ROOT_DIR, 'logs/reduced_classes/best_models/strength7_num2_0012.h5')
+    ROOT_DIR, 'logs/reduced_classes/best_models/depth_strength3_num2.h5')
+# SUN_WEIGHTS_PATH = os.path.join(
+#     ROOT_DIR, 'logs/reduced_classes/best_models/plain_0005.h5')
+
 IGNORE_IMAGES_PATH = os.path.abspath('../skip_image_paths.txt')
 
 sun.ROOT_DIR = ROOT_DIR
@@ -111,7 +114,6 @@ def visualize_sun(model):
     test_sample_ids.extend(sun_dataset.image_ids)
 
     for image_id in test_sample_ids:
-        image_id = random.choice(sun_dataset.image_ids)
         image, image_meta, gt_class_id, gt_bbox, gt_mask = modellib.load_image_gt(
             sun_dataset, config, image_id, use_mini_mask=False)
         info = sun_dataset.image_info[image_id]
