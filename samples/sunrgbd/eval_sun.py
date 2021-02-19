@@ -94,7 +94,10 @@ class mAPEvaluator(object):
                     mAP = sum(APs) / len(APs)
                     mean_iou = sum(ious) / len(ious)
 
-                    eval_data = pd.Series(data=[sun_class, len(self.datasets[dataset_name].image_ids), len(APs), model_name, dataset_name, 'False', mAP, mean_iou],
+                    eval_data = pd.Series(data=[sun_class,
+                                                len(self.datasets[dataset_name].image_ids),
+                                                len(APs), model_name,
+                                                dataset_name, 'False', mAP, mean_iou],
                                           index=self.result_columns)
                     self.results = self.results.append(
                         eval_data, ignore_index=True)
